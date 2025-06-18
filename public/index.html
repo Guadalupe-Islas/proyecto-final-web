@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Formulario de Registro</title>
+  <style>
+    body { font-family: Arial; margin: 20px; }
+    input, button { margin: 5px 0; display: block; padding: 8px; width: 100%; max-width: 300px; }
+    .error { color: red; font-size: 0.9em; }
+    table { border-collapse: collapse; margin-top: 20px; width: 100%; max-width: 600px; }
+    th, td { padding: 8px; border: 1px solid #ccc; text-align: left; }
+  </style>
+</head>
+<body>
+  <h1>Registro de Usuario</h1>
+
+  <form id="formulario">
+    <input type="text" id="nombre" placeholder="Nombre completo" required />
+    <div class="error" id="errorNombre"></div>
+
+    <input type="email" id="email" placeholder="Correo electrónico" required />
+    <div class="error" id="errorEmail"></div>
+
+    <input type="password" id="password" placeholder="Contraseña" required />
+    <div class="error" id="errorPassword"></div>
+
+    <input type="password" id="confirmar" placeholder="Confirmar contraseña" required />
+    <div class="error" id="errorConfirmar"></div>
+
+    <button type="submit">Registrarse</button>
+  </form>
+
+  <hr>
+  <h2>Usuarios Registrados</h2>
+  <table border="1" id="tablaUsuarios">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Nombre</th>
+        <th>Email</th>
+        <th>Eliminar</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    const formulario = document.getElementById('formulario');
+    const nombre = document.getElementById('nombre');
+    const email = document.getElementById('email');
+    const password = document.getElementById('password');
+    const confirmar = document.getElementById('confirmar');
+
+    const errorNombre = document.getElementById('errorNombre');
+    const errorEmail = document.getElementById('errorEmail');
+    const errorPassword = document.getElementById('errorPassword');
+    const errorConfirmar = document.getElementById('errorConfirmar');
+
+    function validarFormulario() {
+      let valido = true;
+
+      errorNombre.textContent = nombre.value.trim() === '' ? 'El nombre es obligatorio.' : '';
+      valido = valido && nombre.value.trim() !== '';
+
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      errorEmail.textContent = emailRegex.test(email.value) ? '' : 'El correo no es válido.';
+      valido = valido && emailRegex.test(email.value);
+
+      const passRegex = /^(?=.*[A-Z])(?=.*\d).{8,}$/;
+      errorPassword.textContent = passRegex.test(password.value)
+        ? ''
+        : 'Debe tener al menos 8 caracteres, una mayúscula y un número.';
+      valido = valido && passRegex.test(password.value);
+
+      errorConfirmar.textContent = password.value === confirmar.value
+        ? ''
+        : 'Las contraseñas no coinciden.';
+      valido = valido && password.value === confirmar.value;
+
+      return valido;
+    }
+
+    formulario.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      if (!validarFormulario()) return;
+
+      const datos = {
+        nombre: nombre.value,
+        email: email.value,
+        password: password.value
+      };
+
+      const res = await fetch('/registro', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(datos)
+      });
+
+      const resultado = await res.json();
+      alert(resultado.mensaje);
+
+      formulario.reset();
+      cargarUsuarios(); // ✅ Actualizar tabla
+    });
+
+    async function cargarUsuarios() {
+      const res = await fetch('/datos');
+      const usuarios = await res.json();
+      const tabla = document.querySelector('#tablaUsuarios tbody');
+      tabla.innerHTML = '';
+
+      usuarios.forEach(usuario => {
+        const fila = `
+          <tr>
+            <td>${usuario.id}</td>
+            <td>${usuario.nombre}</td>
+            <td>${usuario.email}</td>
+            <td><button onclick="eliminarUsuario(${usuario.id})">❌</button></td>
+          </tr>
+        `;
+        tabla.innerHTML += fila;
+      });
+    }
+
+    async function eliminarUsuario(id) {
+      if (confirm('¿Eliminar este usuario?')) {
+        const res = await fetch('/eliminar/' + id, { method: 'DELETE' });
+        const resultado = await res.json();
+        alert(resultado.mensaje);
+        cargarUsuarios();
+      }
+    }
+
+    // Cargar usuarios al inicio
+    cargarUsuarios();
+  </script>
+</body>
+</html>
